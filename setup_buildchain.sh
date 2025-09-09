@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env nix-shell
+#!nix-shell -i bash --pure
+#!nix-shell -p git git-repo coreutils cacert
+#!nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/nixos-24.05.tar.gz
 
 # SPDX-License-Identifier: GPL-3.0
 #
@@ -21,8 +24,17 @@ CURRENT_DIR="$(pwd)"
 function getAOSPBuildtools() {
 	echo "[💠] Getting the buildchain"
 	mkdir $BUILDCHAIN && cd $BUILDCHAIN
-	repo init -u https://android.googlesource.com/kernel/manifest -b common-android15-6.6
-	repo sync
+
+	# Only do a shallow pull: we do not need all version history
+	repo init --depth=1 -u https://android.googlesource.com/kernel/manifest -b common-android15-6.6
+
+	# Check for updates and apply updates to disk separately with different parallelism
+
+	# -c, --current-branch | fetch only the current branch from the server
+  # -j, --jobs           | number of jobs to run in parallel
+	repo sync -c -n -j 4  # -n, --network-only   | only fetch data from the network ; don't update the working directory
+	repo sync -c -l -j 16 # -l, --local-only     | only update the working directory; don't fetch from the network
+
 	cd ..
 	echo "[✅] Done."
 }
@@ -30,17 +42,17 @@ function getAOSPBuildtools() {
 function getSamsungKernel() {
 	echo "[💠] Getting Samsung kernel for S24 (Exynos) from github"
 	mkdir $KERNELBUILD && cd $KERNELBUILD
-	git clone http://github.com/dx4m/android-kernel-samsung-e1s.git -b main common
+	git clone http://github.com/digitalheir/android-kernel-samsung-e1s.git -b master common
 	cd ..
 	echo "[✅] Done."
 }
 
 function movePrebuilts() {
 	echo "[💠] Moving buildchain from AOSP Buildchain to ${KERNELBUILD} folder"
-	mv $BUILDCHAIN/tools $TOOLS
-	mv $BUILDCHAIN/prebuilts $PREBUILTS
-	mv $BUILDCHAIN/external $EXTERNAL
-	mv $BUILDCHAIN/build $BUILD
+	cp $BUILDCHAIN/tools $TOOLS
+	cp $BUILDCHAIN/prebuilts $PREBUILTS
+	cp $BUILDCHAIN/external $EXTERNAL
+	cp $BUILDCHAIN/build $BUILD
 	echo "[✅] Done."
 }
 
@@ -54,14 +66,14 @@ function removeAOSPBuildchain() {
 
 
 if [ ! -d $KERNELBUILD ]; then
-	getSamsungKernel
+	echo getSamsungKernel
 fi
 
-if [ ! -d $PREBUILTS ]; then
-	if [ ! -d $BUILDCHAIN ]; then
+#if [ ! -d $PREBUILTS ]; then
+	#if [ ! -d $BUILDCHAIN ]; then
 		getAOSPBuildtools
-	fi
+	#fi
 	
 	movePrebuilts
-	removeAOSPBuildchain
-fi
+	#removeAOSPBuildchain#(Do not delete checked out AOSP)
+#fi

@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env nix-shell
+#!nix-shell -i bash --pure
+#!nix-shell -p coreutils toybox python3 lld bison flex
+#!nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/nixos-24.05.tar.gz
 
 # SPDX-License-Identifier: GPL-3.0
 #
